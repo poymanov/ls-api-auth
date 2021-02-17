@@ -1,0 +1,44 @@
+version: '3'
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+    volumes:
+      - .:/app
+    depends_on:
+      - php-fpm
+    ports:
+      - "8080:80"
+  php-fpm:
+    build:
+      context: ./docker/php
+      dockerfile: php-fpm.docker
+    environment:
+      PHP_IDE_CONFIG: serverName=ls-api-auth
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+  php-cli:
+    build:
+      context: ./docker/php
+      dockerfile: php-cli.docker
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+  db:
+    image: mysql:5.7
+    volumes:
+      - db:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ls_api_auth
+      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+    ports:
+      - "3306:3306"
+  mailhog:
+    image: 'mailhog/mailhog:latest'
+    ports:
+      - "8025:8025"
+volumes:
+  db:
