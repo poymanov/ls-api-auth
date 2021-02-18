@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,3 +32,5 @@ Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
         Route::post('/login', [AuthController::class, 'login'])->name('login');
     });
 });
+
+Route::get('/profile', [ProfileController::class, 'show'])->middleware(['auth:sanctum'])->name('profile');
