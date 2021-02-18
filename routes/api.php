@@ -30,6 +30,10 @@ Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
             ->name('resent_email_verification');
 
         Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+        Route::post('/logout', [AuthController::class, 'logout'])
+            ->middleware(['auth:sanctum'])
+            ->name('logout');
     });
 });
 

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Auth\LoginRequest;
 use App\Services\Auth\LoginService;
+use App\Services\Auth\LogoutService;
 use App\Services\Auth\RegisterService;
 use OpenApi\Annotations as OA;
 use App\Http\Requests\Auth\RegistrationRequest;
@@ -42,14 +43,19 @@ class AuthController extends Controller
     /** @var LoginService */
     private LoginService $loginService;
 
+    /** @var LogoutService */
+    private LogoutService $logoutService;
+
     /**
      * @param RegisterService $registerService
      * @param LoginService    $loginService
+     * @param LogoutService   $logoutService
      */
-    public function __construct(RegisterService $registerService, LoginService $loginService)
+    public function __construct(RegisterService $registerService, LoginService $loginService, LogoutService $logoutService)
     {
         $this->registerService = $registerService;
         $this->loginService    = $loginService;
+        $this->logoutService   = $logoutService;
     }
 
     /**
@@ -243,5 +249,26 @@ class AuthController extends Controller
         } catch (Throwable $e) {
             return response()->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/logout",
+     *     tags={"auth"},
+     *     security={
+     *         {"bearerAuth": {}}
+     *     },
+     *     summary="Завершение пользовательского сеанса",
+     *     @OA\Response(response="200", description="Успешное завершение пользовательского сеанса"),
+     *     @OA\Response(response="403", description="Попытка завершения пользовательского сеанса неавторизованным пользователем"),
+     * )
+     *
+     * @return Application|ResponseFactory|Response
+     */
+    public function logout()
+    {
+        $this->logoutService->deleteTokens(auth()->user());
+
+        return response(null);
     }
 }
