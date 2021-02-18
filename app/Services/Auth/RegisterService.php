@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Auth;
 
 use App\Models\User;
 use Exception;
@@ -11,7 +11,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Hash;
 use Throwable;
 
-class AuthService
+class RegisterService
 {
     /**
      * Создания нового пользователя

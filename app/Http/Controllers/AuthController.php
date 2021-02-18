@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\LoginRequest;
+use App\Services\Auth\LoginService;
+use App\Services\Auth\RegisterService;
 use OpenApi\Annotations as OA;
 use App\Http\Requests\Auth\RegistrationRequest;
-use App\Services\AuthService;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Http\JsonResponse;
@@ -23,19 +25,31 @@ use Throwable;
  *     @OA\Property(property="email", type="string", example="test@test.ru", description="Email пользователя", maxLength=255),
  *     @OA\Property(property="password", type="string", example="password", description="Пароль", minLength=8),
  *     @OA\Property(property="password_confirmation", type="string", example="password", description="Подтверждение пароля", minLength=6),
+ * )
+ * @OA\Schema(
+ *     schema="LoginRequestBody",
+ *     title="Login Request Body",
+ *     required={"email", "password"},
+ *     @OA\Property(property="email", type="string", example="test@test.ru", description="Email пользователя", maxLength=255),
+ *     @OA\Property(property="password", type="string", example="password", description="Пароль"),
  * ),
  */
 class AuthController extends Controller
 {
-    /** @var AuthService */
-    private AuthService $authService;
+    /** @var RegisterService */
+    private RegisterService $registerService;
+
+    /** @var LoginService */
+    private LoginService $loginService;
 
     /**
-     * @param AuthService $authService
+     * @param RegisterService $registerService
+     * @param LoginService    $loginService
      */
-    public function __construct(AuthService $authService)
+    public function __construct(RegisterService $registerService, LoginService $loginService)
     {
-        $this->authService = $authService;
+        $this->registerService = $registerService;
+        $this->loginService    = $loginService;
     }
 
     /**
@@ -50,7 +64,6 @@ class AuthController extends Controller
      *     @OA\Response(response="201", description="Успешная регистрация"),
      *     @OA\Response(response="422", description="Ошибки валидации параметров",
      *         @OA\JsonContent(
-     *              @OA\Property(property="message", type="string", example="Validation failed"),
      *              @OA\Property(property="errors", type="object",
      *                  @OA\Property(property="name", type="array",
      *                      @OA\Items(type="string", example="The name field is required.")
@@ -73,7 +86,7 @@ class AuthController extends Controller
     public function registration(RegistrationRequest $request)
     {
         try {
-            $this->authService->register(
+            $this->registerService->register(
                 $request->get('name'),
                 $request->get('email'),
                 $request->get('password')
@@ -144,7 +157,7 @@ class AuthController extends Controller
         $emailHash = $request->route('hash');
 
         try {
-            $this->authService->verifyEmail((int) $userId, $emailHash);
+            $this->registerService->verifyEmail((int) $userId, $emailHash);
 
             return response(null);
         } catch (Throwable $e) {
@@ -183,9 +196,50 @@ class AuthController extends Controller
         $email = $request->get('email');
 
         try {
-            $this->authService->resendVerifyEmail($email);
+            $this->registerService->resendVerifyEmail($email);
 
             return response(null);
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/login",
+     *     tags={"auth"},
+     *     summary="Авторизация пользователя",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/LoginRequestBody")
+     *     ),
+     *     @OA\Response(response="200", description="Успешная авторизация",
+     *          @OA\JsonContent(@OA\Property(property="access_token", type="string", example="1|n0m8wCCX1yr8mXsrSvQVeJGgI7d1lr5OICTYxPpU"))
+     *     ),
+     *     @OA\Response(response="422", description="Ошибки валидации параметров",
+     *         @OA\JsonContent(
+     *              @OA\Property(property="errors", type="object",
+     *                  @OA\Property(property="email", type="array",
+     *                      @OA\Items(type="string", example="The email field is required.")
+     *                  ),
+     *                  @OA\Property(property="password", type="array",
+     *                      @OA\Items(type="string", example="The password field is required.")
+     *                  ),
+     *              ),
+     *          ),
+     *     ),
+     * )
+     *
+     * @param LoginRequest $request
+     *
+     * @return JsonResponse
+     */
+    public function login(LoginRequest $request): JsonResponse
+    {
+        try {
+            $accessToken = $this->loginService->login($request->get('email'), $request->get('password'));
+
+            return response()->json(['access_token' => $accessToken]);
         } catch (Throwable $e) {
             return response()->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
