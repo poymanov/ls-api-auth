@@ -20,6 +20,7 @@ Route::get('/', [HomeController::class, 'index']);
 
 Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
     Route::post('/registration', [AuthController::class, 'registration'])->name('registration');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('reset_password');
 
     Route::group(['middleware' => 'throttle:6,1'], function () {
         Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
@@ -34,6 +35,8 @@ Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
         Route::post('/logout', [AuthController::class, 'logout'])
             ->middleware(['auth:sanctum'])
             ->name('logout');
+
+        Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->name('forgot_password');
     });
 });
 

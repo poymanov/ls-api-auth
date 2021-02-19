@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Services\Auth\ForgotPasswordService;
 use App\Services\Auth\LoginService;
 use App\Services\Auth\LogoutService;
 use App\Services\Auth\RegisterService;
+use App\Services\Auth\ResetPasswordService;
 use OpenApi\Annotations as OA;
 use App\Http\Requests\Auth\RegistrationRequest;
 use Illuminate\Contracts\Foundation\Application;
@@ -46,16 +50,31 @@ class AuthController extends Controller
     /** @var LogoutService */
     private LogoutService $logoutService;
 
+    /** @var ForgotPasswordService */
+    private ForgotPasswordService $forgotPassword;
+
+    /** @var ResetPasswordService */
+    private ResetPasswordService $resetPasswordService;
+
     /**
-     * @param RegisterService $registerService
-     * @param LoginService    $loginService
-     * @param LogoutService   $logoutService
+     * @param RegisterService       $registerService
+     * @param LoginService          $loginService
+     * @param LogoutService         $logoutService
+     * @param ForgotPasswordService $forgotPassword
+     * @param ResetPasswordService  $resetPasswordService
      */
-    public function __construct(RegisterService $registerService, LoginService $loginService, LogoutService $logoutService)
-    {
-        $this->registerService = $registerService;
-        $this->loginService    = $loginService;
-        $this->logoutService   = $logoutService;
+    public function __construct(
+        RegisterService $registerService,
+        LoginService $loginService,
+        LogoutService $logoutService,
+        ForgotPasswordService $forgotPassword,
+        ResetPasswordService $resetPasswordService
+    ) {
+        $this->registerService      = $registerService;
+        $this->loginService         = $loginService;
+        $this->logoutService        = $logoutService;
+        $this->forgotPassword       = $forgotPassword;
+        $this->resetPasswordService = $resetPasswordService;
     }
 
     /**
@@ -270,5 +289,72 @@ class AuthController extends Controller
         $this->logoutService->deleteTokens(auth()->user());
 
         return response(null);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/forgot-password",
+     *     summary="Запрос на сброс пароля пользователя",
+     *     tags={"auth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *              @OA\Property(property="email", type="string", example="test@test.ru", description="Email пользователя, которому необходимо сбросить пароль", maxLength=255),
+     *         )
+     *     ),
+     *     @OA\Response(response="200", description="Успешное завершение запроса на сброс пароля"),
+     *     @OA\Response(response="422", description="Ошибки запроса на сброс пароля"),
+     * )
+     *
+     * @param ForgotPasswordRequest $request
+     *
+     * @return Application|ResponseFactory|JsonResponse|Response
+     */
+    public function forgotPassword(ForgotPasswordRequest $request)
+    {
+        try {
+            $this->forgotPassword->sendRequest($request->get('email'));
+
+            return response(null);
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/auth/reset-password",
+     *     summary="Сброс пароля пользователя",
+     *     tags={"auth"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *              @OA\Property(property="email", type="string", example="test@test.ru", description="Email пользователя, которому необходимо сбросить пароль", maxLength=255),
+     *              @OA\Property(property="password", type="string", example="password", description="Пароль", minLength=8),
+     *              @OA\Property(property="password_confirmation", type="string", example="password", description="Подтверждение пароля", minLength=6)
+     *         )
+     *     ),
+     *     @OA\Response(response="200", description="Успешный сброс пароля пользователя"),
+     *     @OA\Response(response="422", description="Ошибки сброса пароля пользователя"),
+     * )
+     *
+     * @param ResetPasswordRequest $request
+     *
+     * @return JsonResponse
+     */
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        try {
+            $this->resetPasswordService->reset(
+                $request->get('email'),
+                $request->get('password'),
+                $request->get('password_confirmation'),
+                $request->get('token')
+            );
+
+            return response()->json();
+        } catch (Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
     }
 }
