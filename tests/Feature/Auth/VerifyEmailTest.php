@@ -18,6 +18,8 @@ class VerifyEmailTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const RESEND_URL = '/api/auth/resend-email-verification';
+
     /**
      * Попытка подтверждения email для несуществующего пользователя
      */
@@ -78,7 +80,7 @@ class VerifyEmailTest extends TestCase
      */
     public function test_resend_not_existed_user()
     {
-        $response = $this->get($this->getResendUrl('test@test.ru'));
+        $response = $this->post(self::RESEND_URL, ['email' => 'test@test.ru']);
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
         $response->assertJsonFragment(['message' => 'No account found for confirmation.']);
     }
@@ -90,7 +92,7 @@ class VerifyEmailTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->get($this->getResendUrl($user->email));
+        $response = $this->post(self::RESEND_URL, ['email' => $user->email]);
         $response->assertStatus(Response::HTTP_UNPROCESSABLE_ENTITY);
         $response->assertJsonFragment(['message' => 'The account has already been confirmed.']);
     }
@@ -104,7 +106,7 @@ class VerifyEmailTest extends TestCase
 
         $user = User::factory()->unverified()->create();
 
-        $response = $this->get($this->getResendUrl($user->email));
+        $response = $this->post(self::RESEND_URL, ['email' => $user->email]);
         $response->assertOk();
 
         Notification::assertTimesSent(1, VerifyEmail::class);
@@ -129,10 +131,5 @@ class VerifyEmailTest extends TestCase
             ],
             false
         );
-    }
-
-    private function getResendUrl(string $email): string
-    {
-        return '/api/auth/resend-email-verification?email=' . $email;
     }
 }

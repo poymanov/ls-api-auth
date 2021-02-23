@@ -27,7 +27,7 @@ Route::group(['prefix' => 'auth', 'as' => 'auth.'], function () {
             ->middleware(['signed:relative'])
             ->name('verify');
 
-        Route::get('/resend-email-verification', [AuthController::class, 'resendEmailVerification'])
+        Route::post('/resend-email-verification', [AuthController::class, 'resendEmailVerification'])
             ->name('resent_email_verification');
 
         Route::post('/login', [AuthController::class, 'login'])->name('login');

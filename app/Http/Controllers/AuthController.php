@@ -34,6 +34,12 @@ use Throwable;
  *     @OA\Property(property="email", type="string", example="test@test.ru", description="Email пользователя", maxLength=255),
  *     @OA\Property(property="password", type="string", example="password", description="Пароль"),
  * ),
+ * @OA\Schema(
+ *     schema="ResendEmailVerificationRequestBody",
+ *     title="Resend Email Verification Request Body",
+ *     required={"email"},
+ *     @OA\Property(property="email", type="string", example="test@test.ru", description="Email пользователя", maxLength=255)
+ * )
  */
 class AuthController extends Controller
 {
@@ -161,19 +167,14 @@ class AuthController extends Controller
     }
 
     /**
-     * @OA\Get(
+     * @OA\Post(
      *     path="/api/auth/resend-email-verification",
      *     tags={"auth"},
-     *     @OA\Parameter(
-     *         description="Email, для которого необходимо выслать повторное письмо для подтверждения адреса",
-     *         in="query",
-     *         name="email",
-     *         required=true,
-     *         @OA\Schema(
-     *           type="string",
-     *         )
-     *     ),
      *     summary="Повторная отправка письма для подтверждения адреса",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(ref="#/components/schemas/ResendEmailVerificationRequestBody")
+     *     ),
      *     @OA\Response(response="200", description="Успешная отправка письма для подтверждения адреса"),
      *     @OA\Response(response="422", description="Ошибка отправки письма для подтверждения адреса",
      *         @OA\JsonContent(
