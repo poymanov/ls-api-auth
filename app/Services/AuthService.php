@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Throwable;
@@ -50,24 +51,24 @@ class AuthService
         try {
             $user = User::findOrFail($userId);
         } catch (Throwable $e) {
-            throw new Exception('No account found for confirmation.');
+            throw new Exception(Lang::get('auth.verify_email_no_account'));
         }
 
         // Если адрес уже подтвержден
         if ($user->hasVerifiedEmail()) {
-            throw new Exception('The account has already been confirmed.');
+            throw new Exception(Lang::get('auth.verify_email_already_confirmed'));
         }
 
         // Неправильный email hash
         if (!hash_equals($emailHash,
             sha1($user->getEmailForVerification()))) {
-            throw new Exception('Incorrect data to confirm the account.');
+            throw new Exception(Lang::get('auth.verify_email_invalid_hash'));
         }
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
         } else {
-            throw new Exception('Account confirmation error.');
+            throw new Exception(Lang::get('auth.verify_email_failed'));
         }
     }
 
@@ -84,12 +85,12 @@ class AuthService
         try {
             $user = User::where('email', $email)->firstOrFail();
         } catch (Exception $e) {
-            throw new Exception('No account found for confirmation.');
+            throw new Exception(Lang::get('auth.resend_verification_email_no_account'));
         }
 
         // Если адрес уже подтвержден
         if ($user->hasVerifiedEmail()) {
-            throw new Exception('The account has already been confirmed.');
+            throw new Exception(Lang::get('auth.resend_verification_email_already_confirmed'));
         }
 
         $user->sendEmailVerificationNotification();
@@ -107,9 +108,9 @@ class AuthService
         $status = Password::sendResetLink(['email' => $email]);
 
         if ($status === Password::RESET_THROTTLED) {
-            throw new Exception('The password reset has been requested previously.');
+            throw new Exception(Lang::get('auth.reset_password_request_throttled'));
         } elseif ($status !== Password::RESET_LINK_SENT) {
-            throw new Exception('Error sending a link to create a new password.');
+            throw new Exception(Lang::get('auth.reset_password_request_failed'));
         }
     }
 
@@ -125,15 +126,15 @@ class AuthService
         $user = User::where('email', $email)->first();
 
         if (!$user) {
-            throw new Exception('These credentials do not match our records.');
+            throw new Exception(Lang::get('auth.login_invalid_credentials'));
         }
 
         if (!$user->hasVerifiedEmail()) {
-            throw new Exception('Account not verified.');
+            throw new Exception(Lang::get('auth.login_user_not_verified'));
         }
 
         if (!Auth::attempt(['email' => $email, 'password' => $password], false)) {
-            throw new Exception('These credentials do not match our records.');
+            throw new Exception(Lang::get('auth.login_invalid_credentials'));
         }
 
         return $user->createToken('auth-token')->plainTextToken;
@@ -169,9 +170,11 @@ class AuthService
         );
 
         if ($status === Password::INVALID_TOKEN) {
-            throw new Exception('Invalid reset token.');
-        } else if ($status !== Password::PASSWORD_RESET) {
-            throw new Exception('Error setting a new password.');
+            throw new Exception(Lang::get('auth.reset_password_invalid_token'));
+        } else {
+            if ($status !== Password::PASSWORD_RESET) {
+                throw new Exception(Lang::get('auth.reset_password_failed'));
+            }
         }
     }
 
