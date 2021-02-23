@@ -7,11 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
-use App\Services\Auth\ForgotPasswordService;
-use App\Services\Auth\LoginService;
-use App\Services\Auth\LogoutService;
-use App\Services\Auth\RegisterService;
-use App\Services\Auth\ResetPasswordService;
+use App\Services\AuthService;
 use OpenApi\Annotations as OA;
 use App\Http\Requests\Auth\RegistrationRequest;
 use Illuminate\Contracts\Foundation\Application;
@@ -41,40 +37,14 @@ use Throwable;
  */
 class AuthController extends Controller
 {
-    /** @var RegisterService */
-    private RegisterService $registerService;
-
-    /** @var LoginService */
-    private LoginService $loginService;
-
-    /** @var LogoutService */
-    private LogoutService $logoutService;
-
-    /** @var ForgotPasswordService */
-    private ForgotPasswordService $forgotPassword;
-
-    /** @var ResetPasswordService */
-    private ResetPasswordService $resetPasswordService;
+    private AuthService $authService;
 
     /**
-     * @param RegisterService       $registerService
-     * @param LoginService          $loginService
-     * @param LogoutService         $logoutService
-     * @param ForgotPasswordService $forgotPassword
-     * @param ResetPasswordService  $resetPasswordService
+     * @param AuthService $authService
      */
-    public function __construct(
-        RegisterService $registerService,
-        LoginService $loginService,
-        LogoutService $logoutService,
-        ForgotPasswordService $forgotPassword,
-        ResetPasswordService $resetPasswordService
-    ) {
-        $this->registerService      = $registerService;
-        $this->loginService         = $loginService;
-        $this->logoutService        = $logoutService;
-        $this->forgotPassword       = $forgotPassword;
-        $this->resetPasswordService = $resetPasswordService;
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
     }
 
     /**
@@ -111,7 +81,7 @@ class AuthController extends Controller
     public function registration(RegistrationRequest $request)
     {
         try {
-            $this->registerService->register(
+            $this->authService->register(
                 $request->get('name'),
                 $request->get('email'),
                 $request->get('password')
@@ -182,7 +152,7 @@ class AuthController extends Controller
         $emailHash = $request->route('hash');
 
         try {
-            $this->registerService->verifyEmail((int) $userId, $emailHash);
+            $this->authService->verifyEmail((int) $userId, $emailHash);
 
             return response(null);
         } catch (Throwable $e) {
@@ -221,7 +191,7 @@ class AuthController extends Controller
         $email = $request->get('email');
 
         try {
-            $this->registerService->resendVerifyEmail($email);
+            $this->authService->resendVerifyEmail($email);
 
             return response(null);
         } catch (Throwable $e) {
@@ -262,7 +232,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         try {
-            $accessToken = $this->loginService->login($request->get('email'), $request->get('password'));
+            $accessToken = $this->authService->login($request->get('email'), $request->get('password'));
 
             return response()->json(['access_token' => $accessToken]);
         } catch (Throwable $e) {
@@ -286,7 +256,7 @@ class AuthController extends Controller
      */
     public function logout()
     {
-        $this->logoutService->deleteTokens(auth()->user());
+        $this->authService->logout(auth()->user());
 
         return response(null);
     }
@@ -313,7 +283,7 @@ class AuthController extends Controller
     public function forgotPassword(ForgotPasswordRequest $request)
     {
         try {
-            $this->forgotPassword->sendRequest($request->get('email'));
+            $this->authService->sendResetPasswordRequest($request->get('email'));
 
             return response(null);
         } catch (Throwable $e) {
@@ -342,10 +312,10 @@ class AuthController extends Controller
      *
      * @return JsonResponse
      */
-    public function resetPassword(ResetPasswordRequest $request)
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         try {
-            $this->resetPasswordService->reset(
+            $this->authService->resetPassword(
                 $request->get('email'),
                 $request->get('password'),
                 $request->get('password_confirmation'),
