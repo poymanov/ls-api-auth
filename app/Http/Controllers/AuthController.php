@@ -297,6 +297,15 @@ class AuthController extends Controller
      *     path="/api/auth/reset-password",
      *     summary="Сброс пароля пользователя",
      *     tags={"auth"},
+     *     @OA\Parameter(
+     *         name="token",
+     *         in="path",
+     *         required=true,
+     *         description="Токен из запроса сброса пароля",
+     *         @OA\Schema(
+     *             type="string"
+     *         )
+     *     ),
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
